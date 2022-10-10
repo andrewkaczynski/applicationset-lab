@@ -1,0 +1,78 @@
+version: '3'
+
+silent: true
+
+vars:
+  ARGOCD_USERNAME: admin
+  ARGOCD_PASSWORD: argocd
+
+tasks:
+  build:
+    desc: 'CREATE CLUSTERS'
+    cmds:
+      - task: kind:argocd-manager:create
+      - task: kind:warsaw:create
+      - task: kind:paris:create
+      - echo 'Clusters creation completed.'
+  build-all:
+    desc: 'CREATE CLUSTERS AND CONFIGURE DEFAULT APPS'
+    cmds:
+      - task: build
+      - task: argocd-manager:argocd-install
+      - sleep 60s
+      - task: argocd-manager:add-clusters
+
+  kind:argocd-manager:create:
+    desc: 'CREATE CLUSTER: ARGOCD-MANAGER'
+    cmds:
+      - kind create cluster --config clusters/argocd-manager/kind.yaml
+
+  kind:warsaw:create:
+    desc: 'CREATE CLUSTER: WARSAW'
+    cmds:
+      - kind create cluster --config clusters/cluster1/kind.yaml
+
+  kind:paris:create:
+    desc: 'CREATE CLUSTER: PARIS'
+    cmds:
+      - kind create cluster --config clusters/cluster2/kind.yaml
+
+  argocd-manager:argocd-install:
+    desc: 'INSTALL ARGO-CD ON ARGOCD-MANAGER CLUSTER WITH HELM'
+    cmds:
+      - helm install argocd -n argocd charts/argo-cd/4.10.0/ --values clusters/argocd-manager/applications/argo-cd/values.yaml --create-namespace --kube-context kind-argocd-manager
+
+  argocd-manager:add-warsaw-cluster:
+    desc: 'ADD WARSAW CLUSTER TO ARGOCD-MANAGER'
+    cmds:
+      - kind get kubeconfig --internal -n warsaw > ./warsaw-kubeconfig
+      - kubectl --context kind-argocd-manager cp ./warsaw-kubeconfig argocd/{{ .ARGOCD_SERVER }}:/tmp/
+      - kubectl --context kind-argocd-manager exec -n argocd {{ .ARGOCD_SERVER }} -- argocd login localhost:8080 --username {{ .ARGOCD_USERNAME }} --password {{ .ARGOCD_PASSWORD }} --plaintext
+      - kubectl --context kind-argocd-manager exec -n argocd {{ .ARGOCD_SERVER }} -- argocd cluster add kind-warsaw --kubeconfig /tmp/warsaw-kubeconfig --label cluster=warsaw -y
+    vars:
+      ARGOCD_SERVER:
+        sh: kubectl --context kind-argocd-manager get pod -n argocd -l app.kubernetes.io/component=server -o jsonpath='{.items[0].metadata.name}'
+
+  argocd-manager:add-paris-cluster:
+    desc: 'ADD PARIS CLUSTER TO ARGOCD-MANAGER'
+    cmds:
+      - kind get kubeconfig --internal -n paris > ./paris-kubeconfig
+      - kubectl --context kind-argocd-manager cp ./paris-kubeconfig argocd/{{ .ARGOCD_SERVER }}:/tmp/
+      - kubectl --context kind-argocd-manager exec -n argocd {{ .ARGOCD_SERVER }} -- argocd login localhost:8080 --username {{ .ARGOCD_USERNAME }} --password {{ .ARGOCD_PASSWORD }} --plaintext
+      - kubectl --context kind-argocd-manager exec -n argocd {{ .ARGOCD_SERVER }} -- argocd cluster add kind-paris --kubeconfig /tmp/paris-kubeconfig --label cluster=paris -y
+    vars:
+      ARGOCD_SERVER:
+        sh: kubectl --context kind-argocd-manager get pod -n argocd -l app.kubernetes.io/component=server -o jsonpath='{.items[0].metadata.name}'
+
+  argocd-manager:add-clusters:
+    desc: 'ADD CLUSTERS WARSAW AND PARIS TO ARGOCD-MANAGER'
+    cmds:
+      - task: argocd-manager:add-warsaw-cluster
+      - task: argocd-manager:add-paris-cluster
+
+  destroy:
+    desc: 'DESTROY ALL CLUSTERS'
+    cmds:
+      - kind delete cluster --name argocd-manager
+      - kind delete cluster --name warsaw
+      - kind delete cluster --name paris

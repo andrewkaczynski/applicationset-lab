@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: namespaces
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/andrewkaczynski/trident-operator-lab.git
+    targetRevision: HEAD
+    path: clusters/argocd-manager/namespaces
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated: 
+      prune: true 
+      selfHeal: true 
+ 

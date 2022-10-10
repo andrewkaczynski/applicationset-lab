@@ -1,0 +1,48 @@
+argo-cd:
+  global:
+    image:
+      repository: quay.io/argoproj/argocd
+      tag: v2.4.7
+
+  controller:
+    replicas: 1
+
+  dex:
+    enabled: false
+
+  redis:
+    enabled: true
+
+  server:
+    extraArgs:
+      - --insecure
+
+    config:
+
+    additionalApplications:
+    - name: cluster-bootstrap
+      namespace: argocd
+      project: default
+      source:
+        repoURL: https://github.com/andrewkaczynski/trident-operator-lab.git
+        targetRevision: HEAD
+        path: clusters/argocd-manager/bootstrap
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+  
+  configs:
+    secret:
+      # password: argocd
+      argocdServerAdminPassword: "$2a$10$oIo8Skj03KdhtjUmnhBIC.p.foOiiEmSB24Gm.Qxwte6rdT6V6/Iq"
+      argocdServerAdminPasswordMtime: "2022-07-22T01:00:00Z"
+
+  applicationSet:
+    enabled: true
+
+  notifications:
+    enabled: false
