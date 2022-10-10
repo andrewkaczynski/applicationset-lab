@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/andrewkaczynski/trident-operator-lab.git
+    repoURL: https://github.com/andrewkaczynski/applicationset-lab.git
     targetRevision: HEAD
     path: clusters/argocd-manager/namespaces
 
