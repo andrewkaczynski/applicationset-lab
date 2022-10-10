@@ -5,6 +5,7 @@ silent: true
 vars:
   ARGOCD_USERNAME: admin
   ARGOCD_PASSWORD: argocd
+  TIMEOUT: 60
 
 tasks:
   build:
@@ -19,7 +20,8 @@ tasks:
     cmds:
       - task: build
       - task: argocd-manager:argocd-install
-      - sleep 60s
+      - echo 'Sleep {{ .TIMEOUT }}'
+      - sleep {{ .TIMEOUT }}s
       - task: argocd-manager:add-clusters
 
   kind:argocd-manager:create:
@@ -30,12 +32,12 @@ tasks:
   kind:warsaw:create:
     desc: 'CREATE CLUSTER: WARSAW'
     cmds:
-      - kind create cluster --config clusters/cluster1/kind.yaml
+      - kind create cluster --config clusters/warsaw/kind.yaml
 
   kind:paris:create:
     desc: 'CREATE CLUSTER: PARIS'
     cmds:
-      - kind create cluster --config clusters/cluster2/kind.yaml
+      - kind create cluster --config clusters/paris/kind.yaml
 
   argocd-manager:argocd-install:
     desc: 'INSTALL ARGO-CD ON ARGOCD-MANAGER CLUSTER WITH HELM'
